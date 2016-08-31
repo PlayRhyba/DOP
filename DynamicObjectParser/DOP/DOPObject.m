@@ -8,7 +8,6 @@
 
 
 #import "DOPObject.h"
-#import <objc/runtime.h>
 
 
 @interface DOPObject ()
@@ -32,6 +31,31 @@
     }
     
     return self;
+}
+
+
+- (BOOL)manualProcessingForProperty:(objc_property_t)property withName:(NSString *)propertyName {
+    return NO;
+}
+
+
+- (void)processValueForProperty:(objc_property_t)property
+                       withName:(NSString *)propertyName
+                 fromDictionary:(NSDictionary *)dictionary {}
+
+
+- (Class)classOfObjectsInCollectionForProperty:(objc_property_t)property withName:(NSString *)propertyName {
+    return nil;
+}
+
+
+- (NSDictionary *)dictionary {
+    
+    
+    //TODO: Serialization to dictionary
+    
+    
+    return nil;
 }
 
 
@@ -60,33 +84,53 @@
             objc_property_t property = properties[i];
             NSString *propertyName = [NSString stringWithUTF8String:property_getName(property)];
             
-            id value = [dictionary objectForKey:propertyName];
-            
-            if (value) {
-                NSString *attributesString = [NSString stringWithUTF8String:property_getAttributes(property)];
-                NSString *attributes = [attributesString componentsSeparatedByString:@","].firstObject;
+            if ([self manualProcessingForProperty:property withName:propertyName]) {
+                [self processValueForProperty:property withName:propertyName fromDictionary:dictionary];
+            }
+            else {
+                id value = [dictionary objectForKey:propertyName];
                 
-                if ([attributes hasPrefix:@"T@"]) {
-                    NSArray *components = [attributes componentsSeparatedByString:@"\""];
+                if (value) {
+                    NSString *attributesString = [NSString stringWithUTF8String:property_getAttributes(property)];
+                    NSString *attributes = [attributesString componentsSeparatedByString:@","].firstObject;
                     
-                    if (components.count > 0) {
-                        NSString *classNameString = components[1];
-                        Class class = NSClassFromString(classNameString);
+                    if ([attributes hasPrefix:@"T@"]) {
+                        NSArray *components = [attributes componentsSeparatedByString:@"\""];
                         
-                        if (class != nil) {
-                            if ([[self class] isClass:class subclassOf:[DOPObject class]] && [value isKindOfClass:[NSDictionary class]]) {
-                                id object = [[class alloc]initWithDictionary:value];
-                                [self setValue:object forKey:propertyName];
-                            }
-                            else if (class == [NSArray class]) {
+                        if (components.count > 0) {
+                            NSString *classNameString = components[1];
+                            Class class = NSClassFromString(classNameString);
+                            
+                            if (class != nil) {
+                                id valueObject = nil;
                                 
+                                if ([[self class] isClass:class subclassOf:[DOPObject class]] && [value isKindOfClass:[NSDictionary class]]) {
+                                    valueObject = [[class alloc]initWithDictionary:value];
+                                }
+                                else if (class == [NSArray class] && [value isKindOfClass:[NSArray class]]) {
+                                    Class objectsClass = [self classOfObjectsInCollectionForProperty:property withName:propertyName];
+                                    
+                                    if (objectsClass && [[self class] isClass:objectsClass subclassOf:[DOPObject class]]) {
+                                        NSMutableArray *objects = [NSMutableArray arrayWithCapacity:[(NSArray *)value count]];
+                                        
+                                        for (id obj in (NSArray *)value) {
+                                            if ([obj isKindOfClass:[NSDictionary class]]) {
+                                                id object = [[objectsClass alloc]initWithDictionary:(NSDictionary *)obj];
+                                                
+                                                if (object) {
+                                                    [objects addObject:object];
+                                                }
+                                            }
+                                        }
+                                        
+                                        valueObject = objects;
+                                    }
+                                }
+                                else if ([value isKindOfClass:class]) {
+                                    valueObject = value;
+                                }
                                 
-                                //TODO: Handle arrays
-                                
-                                
-                            }
-                            else if ([value isKindOfClass:class]) {
-                                [self setValue:value forKey:propertyName];
+                                [self setValue:valueObject forKey:propertyName];
                             }
                         }
                     }
