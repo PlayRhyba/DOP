@@ -1,0 +1,46 @@
+{
+    "id": 1,
+    "name": "Microsoft",
+    "contacts": {
+        "email": "microsoft@microsoft.com",
+        "phone": "111-111-111",
+    },
+    "employees": [{
+                  "id": 1,
+                  "firstname": "John",
+                  "lastname": "Smith",
+                  "age": 40,
+                  "position": {
+                        "id": 1,
+                        "name": "Developer",
+                        "salary": 50000
+                        },
+                  "tasks": [{
+                            "id": 1,
+                            "title": "Development"
+                            },
+                            {
+                            "id": 2,
+                            "title": "Testing"
+                            },
+                            {
+                            "id": 3,
+                            "title": "Training"
+                            }]
+                  },
+                  {
+                  "id": 2,
+                  "firstname": "Mike",
+                  "lastname": "Ribel",
+                  "age": 30,
+                  "position": {
+                        "id": 2,
+                        "name": "QA",
+                        "salary": 40000
+                  },
+                  "tasks": [{
+                            "id": 2,
+                            "title": "Testing"
+                            }]
+                  }]
+}
