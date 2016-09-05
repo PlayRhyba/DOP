@@ -11,16 +11,33 @@
 #import <objc/runtime.h>
 
 
+typedef NS_ENUM(NSUInteger, DOPObjectSerializationMode) {
+    DOPObjectSerializationModeFull,
+    DOPObjectSerializationModeChangedOnly,
+};
+
+
 @interface DOPObject : NSObject
 
+
+#pragma mark - Public Methods
+
+
 - (instancetype)initWithDictionary:(NSDictionary *)dictionary;
+- (NSDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode;
+- (BOOL)changed;
+
+
+#pragma mark - Configuration
+
+
 - (BOOL)manualProcessingForProperty:(objc_property_t)property withName:(NSString *)propertyName;
+- (BOOL)trackObjectChanges;
 
 - (void)processValueForProperty:(objc_property_t)property
                        withName:(NSString *)propertyName
                  fromDictionary:(NSDictionary *)dictionary;
 
 - (Class)classOfObjectsInCollectionForProperty:(objc_property_t)property withName:(NSString *)propertyName;
-- (NSDictionary *)dictionary;
 
 @end
