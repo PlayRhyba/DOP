@@ -41,7 +41,8 @@ static NSString * const kTestDataPath = @"testData.json";
             }
             else if ([result isKindOfClass:[NSDictionary class]]) {
                 DOPCompany *company = [[DOPCompany alloc]initWithDictionary:(NSDictionary *)result];
-                NSLog(@"Company: %@", company.name);
+                NSDictionary *serialization = [company dictionaryWithSerializationMode:DOPObjectSerializationModeFull];
+                NSLog(@"Object: %@", serialization);
             }
         }
     }

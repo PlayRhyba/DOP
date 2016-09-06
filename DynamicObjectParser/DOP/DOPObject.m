@@ -8,18 +8,18 @@
 
 
 #import "DOPObject.h"
+#import "NSObject+DOPUtilities.h"
 
 
 @interface DOPObject ()
 
 @property (nonatomic, strong) NSMutableDictionary *initialState;
 
-+ (BOOL)isClass:(Class)classA subclassOf:(Class)classB;
-
-+ (void)enumeratePropertiesOfClass:(Class)objectClass
-                         withBlock:(void (^)(objc_property_t property, NSString *propertyName, Class class, BOOL *stop))block;
-
 - (void)fillPropertiesForClass:(Class)class withDictionary:(NSDictionary *)dictionary;
+
+- (NSMutableDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode
+                                                forClass:(Class)class;
+
 - (NSDictionary *)fullDictionary;
 - (NSDictionary *)changedDictionary;
 
@@ -110,101 +110,124 @@
 #pragma mark - Internal Logic
 
 
-+ (BOOL)isClass:(Class)classA subclassOf:(Class)classB {
-    while (classA) {
-        if (classA == classB) {
-            return YES;
-        }
-        
-        classA = class_getSuperclass(classA);
+- (void)fillPropertiesForClass:(Class)class withDictionary:(NSDictionary *)dictionary {
+    if (class && class != [DOPObject class] && dictionary) {
+        [NSObject enumeratePropertiesOfClass:class
+                                   withBlock:^(objc_property_t property, NSString *propertyName, __unsafe_unretained Class class, BOOL *stop) {
+                                       id value = [dictionary objectForKey:propertyName];
+                                       
+                                       if (value) {
+                                           if ([NSObject isClass:class subclassOf:[DOPObject class]] && [value isKindOfClass:[NSDictionary class]]) {
+                                               id newValue = [[class alloc]initWithDictionary:value];
+                                               [self setValue:newValue forKey:propertyName];
+                                           }
+                                           else if (class == [NSArray class] && [value isKindOfClass:[NSArray class]]) {
+                                               Class objectsClass = [self classOfObjectsInCollectionForProperty:property withName:propertyName];
+                                               
+                                               if (objectsClass && [NSObject isClass:objectsClass subclassOf:[DOPObject class]]) {
+                                                   NSMutableArray *objects = [NSMutableArray arrayWithCapacity:[(NSArray *)value count]];
+                                                   
+                                                   for (id obj in (NSArray *)value) {
+                                                       if ([obj isKindOfClass:[NSDictionary class]]) {
+                                                           id object = [[objectsClass alloc]initWithDictionary:(NSDictionary *)obj];
+                                                           
+                                                           if (object) {
+                                                               [objects addObject:object];
+                                                           }
+                                                       }
+                                                   }
+                                                   
+                                                   [self setValue:objects forKey:propertyName];
+                                               }
+                                           }
+                                           else if ([value isKindOfClass:class]) {
+                                               [self setValue:value forKey:propertyName];
+                                               
+                                               if ([self trackObjectChanges]) {
+                                                   self.initialState[propertyName] = value;
+                                               }
+                                           }
+                                       }
+                                   }];
+    }
+}
+
+
+- (NSMutableDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode
+                                                forClass:(Class)class {
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    
+    if (class && class != [DOPObject class]) {
+        [NSObject enumeratePropertiesOfClass:class
+                                   withBlock:^(objc_property_t property, NSString *propertyName, __unsafe_unretained Class class, BOOL *stop) {
+                                       id value = [self valueForKey:propertyName];
+                                       
+                                       if ([NSObject isClass:class subclassOf:[DOPObject class]] && [value isKindOfClass:[DOPObject class]]) {
+                                           BOOL shouldBeAdded = YES;
+                                           
+                                           if (serializationMode == DOPObjectSerializationModeChangedOnly) {
+                                               shouldBeAdded = [(DOPObject *)value changed];
+                                           }
+                                           
+                                           if (shouldBeAdded) {
+                                               NSDictionary *dictionary = [(DOPObject *)value dictionaryWithSerializationMode:serializationMode];
+                                               result[propertyName] = dictionary;
+                                           }
+                                       }
+                                       else if (class == [NSArray class] && [value isKindOfClass:[NSArray class]]) {
+                                           BOOL shouldBeAdded = YES;
+                                           
+                                           if (serializationMode == DOPObjectSerializationModeChangedOnly) {
+                                               
+                                               
+                                               //TODO: Check value changed
+                                               
+                                               
+                                           }
+                                           
+                                           if (shouldBeAdded) {
+                                               NSMutableArray *dictionaries = [NSMutableArray arrayWithCapacity:[(NSArray *)value count]];
+                                               
+                                               for (id obj in (NSArray *)value) {
+                                                   if ([obj isKindOfClass:[DOPObject class]]) {
+                                                       NSDictionary *dictionary = [(DOPObject *)obj dictionaryWithSerializationMode:serializationMode];
+                                                       [dictionaries addObject:dictionary];
+                                                   }
+                                               }
+                                               
+                                               result[propertyName] = dictionaries;
+                                           }
+                                       }
+                                       else if (value == nil || [value isKindOfClass: class]) {
+                                           BOOL shouldBeAdded = YES;
+                                           
+                                           if (serializationMode == DOPObjectSerializationModeChangedOnly) {
+                                               
+                                               
+                                               //TODO: Check value changed
+                                               
+                                               
+                                           }
+                                           
+                                           if (shouldBeAdded) {
+                                               result[propertyName] = value ?: [NSNull null];
+                                           }
+                                       }
+                                   }];
     }
     
-    return NO;
-}
-
-
-+ (void)enumeratePropertiesOfClass:(Class)objectClass
-                         withBlock:(void (^)(objc_property_t property, NSString *propertyName, Class class, BOOL *stop))block {
-    if (objectClass && block) {
-        unsigned int count = 0;
-        objc_property_t *properties = class_copyPropertyList(objectClass, &count);
-        
-        for (unsigned int i = 0; i < count; i++) {
-            objc_property_t property = properties[i];
-            NSString *propertyName = [NSString stringWithUTF8String:property_getName(property)];
-            
-            NSString *attributesString = [NSString stringWithUTF8String:property_getAttributes(property)];
-            NSString *attributes = [attributesString componentsSeparatedByString:@","].firstObject;
-            
-            if ([attributes hasPrefix:@"T@"]) {
-                NSArray *components = [attributes componentsSeparatedByString:@"\""];
-                
-                if (components.count > 0) {
-                    NSString *classNameString = components[1];
-                    Class class = NSClassFromString(classNameString);
-                    
-                    if (class != nil) {
-                        BOOL stop = NO;
-                        block(property, propertyName, class, &stop);
-                        if (stop) break;
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-- (void)fillPropertiesForClass:(Class)class withDictionary:(NSDictionary *)dictionary {
-    if (class && dictionary) {
-        [[self class]enumeratePropertiesOfClass:class
-                                      withBlock:^(objc_property_t property, NSString *propertyName, __unsafe_unretained Class class, BOOL *stop) {
-                                          id value = [dictionary objectForKey:propertyName];
-                                          
-                                          if (value) {
-                                              if ([[self class] isClass:class subclassOf:[DOPObject class]] && [value isKindOfClass:[NSDictionary class]]) {
-                                                  id newValue = [[class alloc]initWithDictionary:value];
-                                                  [self setValue:newValue forKey:propertyName];
-                                              }
-                                              else if (class == [NSArray class] && [value isKindOfClass:[NSArray class]]) {
-                                                  Class objectsClass = [self classOfObjectsInCollectionForProperty:property withName:propertyName];
-                                                  
-                                                  if (objectsClass && [[self class] isClass:objectsClass subclassOf:[DOPObject class]]) {
-                                                      NSMutableArray *objects = [NSMutableArray arrayWithCapacity:[(NSArray *)value count]];
-                                                      
-                                                      for (id obj in (NSArray *)value) {
-                                                          if ([obj isKindOfClass:[NSDictionary class]]) {
-                                                              id object = [[objectsClass alloc]initWithDictionary:(NSDictionary *)obj];
-                                                              
-                                                              if (object) {
-                                                                  [objects addObject:object];
-                                                              }
-                                                          }
-                                                      }
-                                                      
-                                                      [self setValue:objects forKey:propertyName];
-                                                  }
-                                              }
-                                              else if ([value isKindOfClass:class]) {
-                                                  [self setValue:value forKey:propertyName];
-                                                  
-                                                  if ([self trackObjectChanges]) {
-                                                      self.initialState[propertyName] = value;
-                                                  }
-                                              }
-                                          }
-                                      }];
-    }
+    return result;
 }
 
 
 - (NSDictionary *)fullDictionary {
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     
+    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeFull
+                                                                  forClass:[self superclass]]];
     
-    //TODO: Serialize full object to dictionary
-    
-    
+    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeFull
+                                                                  forClass:[self class]]];
     return result;
 }
 
@@ -212,10 +235,11 @@
 - (NSDictionary *)changedDictionary {
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     
+    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeChangedOnly
+                                                                  forClass:[self superclass]]];
     
-    //TODO: Serialize only changed properties to dictionary
-    
-    
+    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeChangedOnly
+                                                                  forClass:[self class]]];
     return result;
 }
 

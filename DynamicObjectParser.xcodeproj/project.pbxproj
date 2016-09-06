@@ -21,6 +21,7 @@
 		C7008B9B1D76EB52004E30A8 /* DOPPosition.m in Sources */ = {isa = PBXBuildFile; fileRef = C7008B9A1D76EB52004E30A8 /* DOPPosition.m */; };
 		C7008B9E1D76EB5E004E30A8 /* DOPTask.m in Sources */ = {isa = PBXBuildFile; fileRef = C7008B9D1D76EB5E004E30A8 /* DOPTask.m */; };
 		C7008BA41D771E97004E30A8 /* DOPContacts.m in Sources */ = {isa = PBXBuildFile; fileRef = C7008BA31D771E97004E30A8 /* DOPContacts.m */; };
+		C7BA70E91D7EFAE900D9CB49 /* NSObject+DOPUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = C7BA70E81D7EFAE900D9CB49 /* NSObject+DOPUtilities.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +50,8 @@
 		C7008B9D1D76EB5E004E30A8 /* DOPTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DOPTask.m; sourceTree = "<group>"; };
 		C7008BA21D771E97004E30A8 /* DOPContacts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DOPContacts.h; sourceTree = "<group>"; };
 		C7008BA31D771E97004E30A8 /* DOPContacts.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DOPContacts.m; sourceTree = "<group>"; };
+		C7BA70E71D7EFAE900D9CB49 /* NSObject+DOPUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSObject+DOPUtilities.h"; sourceTree = "<group>"; };
+		C7BA70E81D7EFAE900D9CB49 /* NSObject+DOPUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSObject+DOPUtilities.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +109,7 @@
 		C7008B871D76D474004E30A8 /* DOP */ = {
 			isa = PBXGroup;
 			children = (
+				C7BA70E61D7EFABD00D9CB49 /* Categories */,
 				C7008B8D1D76E7FF004E30A8 /* DOPObject.h */,
 				C7008B8E1D76E7FF004E30A8 /* DOPObject.m */,
 				C7008B8A1D76E76E004E30A8 /* Test */,
@@ -131,6 +135,15 @@
 				C7008B9D1D76EB5E004E30A8 /* DOPTask.m */,
 			);
 			path = Test;
+			sourceTree = "<group>";
+		};
+		C7BA70E61D7EFABD00D9CB49 /* Categories */ = {
+			isa = PBXGroup;
+			children = (
+				C7BA70E71D7EFAE900D9CB49 /* NSObject+DOPUtilities.h */,
+				C7BA70E81D7EFAE900D9CB49 /* NSObject+DOPUtilities.m */,
+			);
+			path = Categories;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -209,6 +222,7 @@
 				C7008B9B1D76EB52004E30A8 /* DOPPosition.m in Sources */,
 				C7008B8F1D76E7FF004E30A8 /* DOPObject.m in Sources */,
 				C7008B951D76EB22004E30A8 /* DOPCompany.m in Sources */,
+				C7BA70E91D7EFAE900D9CB49 /* NSObject+DOPUtilities.m in Sources */,
 				C7008B9E1D76EB5E004E30A8 /* DOPTask.m in Sources */,
 				C7008B781D76D44A004E30A8 /* ViewController.m in Sources */,
 				C7008B751D76D44A004E30A8 /* AppDelegate.m in Sources */,
