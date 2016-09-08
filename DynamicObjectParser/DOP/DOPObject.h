@@ -24,8 +24,7 @@ typedef NS_ENUM(NSUInteger, DOPObjectSerializationMode) {
 
 
 - (instancetype)initWithDictionary:(NSDictionary *)dictionary;
-- (NSDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode;
-- (BOOL)changed;
+- (NSMutableDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode;
 
 
 #pragma mark - Configuration

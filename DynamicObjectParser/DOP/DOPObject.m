@@ -20,8 +20,7 @@
 - (NSMutableDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode
                                                 forClass:(Class)class;
 
-- (NSDictionary *)fullDictionary;
-- (NSDictionary *)changedDictionary;
+- (BOOL)isValueChanged:(id)currentValue propertyName:(NSString *)propertyName;
 
 @end
 
@@ -54,33 +53,19 @@
 }
 
 
-- (NSDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode {
-    switch (serializationMode) {
-        case DOPObjectSerializationModeFull: {
-            return [self fullDictionary];
-        }
-        case DOPObjectSerializationModeChangedOnly: {
-            if ([self trackObjectChanges]) {
-                return [self changedDictionary];
-            }
-            else {
-                return [self fullDictionary];
-            }
-        }
-    }
-}
-
-
-- (BOOL)changed {
-    if ([self trackObjectChanges]) {
-        
-        
-        //TODO: Check if some properties have been changed
-        
-        
+- (NSMutableDictionary *)dictionaryWithSerializationMode:(DOPObjectSerializationMode)serializationMode {
+    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+    
+    if ((serializationMode == DOPObjectSerializationModeChangedOnly) && ([self trackObjectChanges] == NO)) {
+        return result;
     }
     
-    return NO;
+    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:serializationMode
+                                                                  forClass:[self superclass]]];
+    
+    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:serializationMode
+                                                                  forClass:[self class]]];
+    return result;
 }
 
 
@@ -163,38 +148,26 @@
                                        id value = [self valueForKey:propertyName];
                                        
                                        if ([NSObject isClass:class subclassOf:[DOPObject class]] && [value isKindOfClass:[DOPObject class]]) {
-                                           BOOL shouldBeAdded = YES;
+                                           NSDictionary *dictionary = [(DOPObject *)value dictionaryWithSerializationMode:serializationMode];
                                            
-                                           if (serializationMode == DOPObjectSerializationModeChangedOnly) {
-                                               shouldBeAdded = [(DOPObject *)value changed];
-                                           }
-                                           
-                                           if (shouldBeAdded) {
-                                               NSDictionary *dictionary = [(DOPObject *)value dictionaryWithSerializationMode:serializationMode];
+                                           if (dictionary.count > 0) {
                                                result[propertyName] = dictionary;
                                            }
                                        }
                                        else if (class == [NSArray class] && [value isKindOfClass:[NSArray class]]) {
-                                           BOOL shouldBeAdded = YES;
+                                           NSMutableArray *dictionaries = [NSMutableArray arrayWithCapacity:[(NSArray *)value count]];
                                            
-                                           if (serializationMode == DOPObjectSerializationModeChangedOnly) {
-                                               
-                                               
-                                               //TODO: Check value changed
-                                               
-                                               
-                                           }
-                                           
-                                           if (shouldBeAdded) {
-                                               NSMutableArray *dictionaries = [NSMutableArray arrayWithCapacity:[(NSArray *)value count]];
-                                               
-                                               for (id obj in (NSArray *)value) {
-                                                   if ([obj isKindOfClass:[DOPObject class]]) {
-                                                       NSDictionary *dictionary = [(DOPObject *)obj dictionaryWithSerializationMode:serializationMode];
+                                           for (id obj in (NSArray *)value) {
+                                               if ([obj isKindOfClass:[DOPObject class]]) {
+                                                   NSDictionary *dictionary = [(DOPObject *)obj dictionaryWithSerializationMode:serializationMode];
+                                                   
+                                                   if (dictionary.count > 0) {
                                                        [dictionaries addObject:dictionary];
                                                    }
                                                }
-                                               
+                                           }
+                                           
+                                           if (dictionaries.count > 0) {
                                                result[propertyName] = dictionaries;
                                            }
                                        }
@@ -202,11 +175,7 @@
                                            BOOL shouldBeAdded = YES;
                                            
                                            if (serializationMode == DOPObjectSerializationModeChangedOnly) {
-                                               
-                                               
-                                               //TODO: Check value changed
-                                               
-                                               
+                                               shouldBeAdded = [self isValueChanged:value propertyName:propertyName];
                                            }
                                            
                                            if (shouldBeAdded) {
@@ -220,27 +189,23 @@
 }
 
 
-- (NSDictionary *)fullDictionary {
-    NSMutableDictionary *result = [NSMutableDictionary dictionary];
+- (BOOL)isValueChanged:(id)currentValue propertyName:(NSString *)propertyName {
+    if ([self trackObjectChanges]) {
+        id oldValue = self.initialState[propertyName];
+        
+        if ((oldValue == nil && [currentValue isKindOfClass:[NSNull class]]) ||
+            (currentValue == nil && [oldValue isKindOfClass:[NSNull class]]) ||
+            ((currentValue == nil) && (oldValue == nil)) ||
+            ([currentValue isKindOfClass:[NSNull class]] && [oldValue isKindOfClass:[NSNull class]])) {
+            return NO;
+        }
+        
+        BOOL changed = ((oldValue == nil) && currentValue) || ((currentValue == nil) && oldValue);
+        changed = changed || ((oldValue && currentValue) && ([oldValue isEqual:currentValue] == NO));
+        return changed;
+    }
     
-    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeFull
-                                                                  forClass:[self superclass]]];
-    
-    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeFull
-                                                                  forClass:[self class]]];
-    return result;
-}
-
-
-- (NSDictionary *)changedDictionary {
-    NSMutableDictionary *result = [NSMutableDictionary dictionary];
-    
-    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeChangedOnly
-                                                                  forClass:[self superclass]]];
-    
-    [result addEntriesFromDictionary:[self dictionaryWithSerializationMode:DOPObjectSerializationModeChangedOnly
-                                                                  forClass:[self class]]];
-    return result;
+    return NO;
 }
 
 @end

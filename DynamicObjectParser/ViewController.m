@@ -9,6 +9,10 @@
 
 #import "ViewController.h"
 #import "DOPCompany.h"
+#import "DOPContacts.h"
+#import "DOPEmployee.h"
+#import "DOPPosition.h"
+#import "DOPTask.h"
 
 
 static NSString * const kTestDataPath = @"testData.json";
@@ -41,8 +45,20 @@ static NSString * const kTestDataPath = @"testData.json";
             }
             else if ([result isKindOfClass:[NSDictionary class]]) {
                 DOPCompany *company = [[DOPCompany alloc]initWithDictionary:(NSDictionary *)result];
-                NSDictionary *serialization = [company dictionaryWithSerializationMode:DOPObjectSerializationModeFull];
-                NSLog(@"Object: %@", serialization);
+                NSDictionary *fullSerialization = [company dictionaryWithSerializationMode:DOPObjectSerializationModeFull];
+                
+                NSLog(@"OBJECT FULL: %@", fullSerialization);
+                
+                company.name = @"Apple";
+                company.contacts.phone = @"222-222-222";
+                
+                company.employees.firstObject.age = @50;
+                company.employees.firstObject.position.salary = @70000;
+                company.employees.firstObject.tasks.firstObject.title = @"Playing guitar";
+                
+                NSDictionary *changedOnlySerialization = [company dictionaryWithSerializationMode:DOPObjectSerializationModeChangedOnly];
+                
+                NSLog(@"CHANGES: %@", changedOnlySerialization);
             }
         }
     }
